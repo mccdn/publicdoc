@@ -2,8 +2,8 @@
   "swagger": "2.0",
   "info": {
     "version": "1.0",
-    "title": "Mooncake CDN 接口文档",
-    "description": "使用该接口管理Mooncake CDN资源。\n\n 验证和授权方式基于接口密钥，请先到CDN管理界面密钥管理处进行接口密钥申请。\n\n 授权信息以Authorization请求头发送，格式为\"AzureCDN {密钥唯一标识}:{用密钥值计算出来的SHA 256请求内容签名}\"。 签名部分包括：请求绝对路径，用 \", \"连接起来的排序过的查询参数，请求的UTC时间戳，大写的请求方法。以上几部分用回车换行连接。以下为Python示例：\n\n      def calculate_authorization_header(request_url, request_timestamp, key_id, key_value, http_method):\n          urlparts = urllib.parse.urlparse(request_url)\n          queries = urllib.parse.parse_qs(urlparts.query)\n          ordered_queries = OrderedDict(queries)\n          message = \"%s\\r\\n%s\\r\\n%s\\r\\n%s\" % (urlparts.path, \", \".join(['%s:%s' % (key, value[0]) for (key, value) in ordered_queries.items()]), request_timestamp, http_method)\n          digest = hmac.new(bytearray(key_value, \"utf-8\"), bytearray(message, \"utf-8\"), hashlib.sha256).hexdigest().upper()\n          return \"AzureCDN %s:%s\" % (key_id, digest)\n"
+    "title": "Azure China CDN Restful API文档",
+    "description": "用户可以使用该接口管理Azure China CDN资源。通过向CDN API服务器发送HTTPS请求，并按照接口说明在请求中加入相应的参数即可获得相应结果\n\n 验证和授权方式基于接口密钥，请先到CDN管理界面密钥管理处进行接口密钥申请。\n\n 授权信息以Authorization请求头发送，格式为\"AzureCDN {密钥唯一标识}:{用密钥值计算出来的SHA 256请求内容签名}\"。 签名部分包括：请求绝对路径，用 \", \"连接起来的排序过的查询参数，请求的UTC时间戳，大写的请求方法。以上几部分用回车换行连接。以下为Python示例：\n\n      def calculate_authorization_header(request_url, request_timestamp, key_id, key_value, http_method):\n          urlparts = urllib.parse.urlparse(request_url)\n          queries = urllib.parse.parse_qs(urlparts.query)\n          ordered_queries = OrderedDict(queries)\n          message = \"%s\\r\\n%s\\r\\n%s\\r\\n%s\" % (urlparts.path, \", \".join(['%s:%s' % (key, value[0]) for (key, value) in ordered_queries.items()]), request_timestamp, http_method)\n          digest = hmac.new(bytearray(key_value, \"utf-8\"), bytearray(message, \"utf-8\"), hashlib.sha256).hexdigest().upper()\n          return \"AzureCDN %s:%s\" % (key_id, digest)\n"
   },
   "host": "api-preview.cdn.azure.cn",
   "schemes": [
