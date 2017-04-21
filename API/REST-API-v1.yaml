@@ -1,0 +1,1020 @@
+swagger: '2.0'
+info:
+  version: '1.0'
+  title: Mooncake CDN 接口文档
+  description: |
+    使用该接口管理Mooncake CDN资源。
+
+     验证和授权方式基于接口密钥，请先到CDN管理界面密钥管理处进行接口密钥申请。
+
+     授权信息以Authorization请求头发送，格式为"AzureCDN {密钥唯一标识}:{用密钥值计算出来的SHA 256请求内容签名}"。 签名部分包括：请求绝对路径，用 ", "连接起来的排序过的查询参数，请求的UTC时间戳，大写的请求方法。以上几部分用回车换行连接。
+     
+    Python示例：
+
+          def calculate_authorization_header(request_url, request_timestamp, key_id, key_value, http_method):
+              urlparts = urllib.parse.urlparse(request_url)
+              queries = urllib.parse.parse_qs(urlparts.query)
+              ordered_queries = OrderedDict(queries)
+              message = "%s\r\n%s\r\n%s\r\n%s" % (urlparts.path, ", ".join(['%s:%s' % (key, value[0]) for (key, value) in ordered_queries.items()]), request_timestamp, http_method)
+              digest = hmac.new(bytearray(key_value, "utf-8"), bytearray(message, "utf-8"), hashlib.sha256).hexdigest().upper()
+              return "AzureCDN %s:%s" % (key_id, digest)
+              
+    Java示例:
+      
+        public static String calculateAuthorizationHeader(String requestURL, String requestTimestamp, String keyID, String keyValue, String httpMethod) throws Exception {
+              URL url = new URL(requestURL);
+              String path = url.getPath();
+              
+              // Get query parameters
+              String query = url.getQuery();      
+              String[] params = query.split("&");
+              Map<String, String> paramMap = new TreeMap<String, String>();
+              for(String param: params) {
+                    String[] paramterParts = param.split("=");
+                    if(paramterParts.length != 2) {
+                          continue;
+                    }
+                    
+                    paramMap.put(paramterParts[0], paramterParts[1]);
+              }
+              
+              String orderedQueries = paramMap.entrySet()
+                                              .stream()
+                                              .map(entry -> entry.getKey() + ":" + entry.getValue())
+                                              .collect(Collectors.joining(", "));
+              
+              String content = String.format("%s\r\n%s\r\n%s\r\n%s", path, orderedQueries, requestTimestamp, httpMethod);        
+              Mac sha256HMAC = Mac.getInstance("HmacSHA256");
+              SecretKeySpec secret_key = new SecretKeySpec(keyValue.getBytes(), "HmacSHA256");
+              sha256HMAC.init(secret_key);
+              byte[] bytes = sha256HMAC.doFinal(content.getBytes());
+              
+              StringBuffer hash = new StringBuffer();
+              for (int i = 0; i < bytes.length; i++) {
+                  String hex = Integer.toHexString(0xFF & bytes[i]);
+                  if (hex.length() == 1) {
+                    hash.append('0');
+                  }
+                  hash.append(hex);
+              }
+        
+              return String.format("AzureCDN %s:%s", keyID, hash.toString().toUpperCase());
+        }
+        
+      C#示例：
+        
+        public static string CalculateAuthorizationHeader(string requestUrl, string requestDate, string key, string httpMethod)
+          {
+                  Uri requestUri = new Uri(requestUrl);
+                  
+                  StringBuilder hashContentBuilder = new StringBuilder();
+                  hashContentBuilder.Append(requestUri.AbsolutePath.ToLowerInvariant());
+                  hashContentBuilder.Append("\r\n");
+      
+                  var queryStrings = HttpUtility.ParseQueryString(requestUri.Query);
+                  var sortedParameterNames = queryStrings.AllKeys.ToList();
+                  sortedParameterNames.Sort((q1, q2) => string.Compare(q1, q2));
+                  var result = string.Join(", ", sortedParameterNames.Select(p => string.Format("{0}:{1}", p, queryStrings[p])).ToArray());
+                  if (!string.IsNullOrEmpty(result))
+                  {
+                      hashContentBuilder.Append(result);
+                      hashContentBuilder.Append("\r\n");
+                  }
+      
+                  hashContentBuilder.Append(requestDate);
+                  hashContentBuilder.Append("\r\n");
+                  hashContentBuilder.Append(httpMethod.ToUpper());
+                  string hashContent = hashContentBuilder.ToString();
+      
+                  using (HMACSHA256 myhmacsha256 = new HMACSHA256(Encoding.UTF8.GetBytes(key)))
+                  {
+                      byte[] byteArray = Encoding.UTF8.GetBytes(hashContent);
+                      byte[] hashedValue = myhmacsha256.ComputeHash(byteArray);
+      
+                      string sbinary = string.Empty;
+                      for (int i = 0; i < hashedValue.Length; i++)
+                      {
+                          sbinary += hashedValue[i].ToString("X2");
+                      }
+      
+                      return sbinary;
+                  }
+          }
+        
+    Go示例：
+      
+      
+          func calculateAuthorizationHeader(requestURL, requestTimeStamp, keyID, keyValue, httpMethod string) string {
+                      u, err := url.Parse(requestURL)
+                      if err != nil {
+                          panic(err)
+                      }
+      
+                      var path = u.Path
+                      m, _ := url.ParseQuery(u.RawQuery)
+      
+                      var keys []string
+                      for k := range m {
+                                      keys = append(keys, k)
+                      }
+                      sort.Strings(keys)
+                      var orderedQueries []string
+                      for _, k := range keys {
+                                      orderedQueries = append(orderedQueries, fmt.Sprintf("%s:%s", k, m[k][0]))
+                      }
+      
+                      var queries = strings.Join(orderedQueries, ", ")
+                      content := fmt.Sprintf("%s\r\n%s\r\n%s\r\n%s", path, queries, requestTimeStamp, httpMethod)
+                      hash := hmac.New(sha256.New, []byte(keyValue))
+                      hash.Write([]byte(content))
+                      digest := strings.ToUpper(hex.EncodeToString(hash.Sum(nil)))
+                      return fmt.Sprintf("AzureCDN %s:%s", keyID, digest)
+           }
+host: api-preview.cdn.azure.cn
+schemes:
+  - https
+consumes:
+  - application/json
+produces:
+  - application/json
+paths:
+  '/subscriptions/{subscriptionId}/endpoints':
+    get:
+      tags:
+        - 节点管理
+      description: 获取指定订阅下的所有节点信息
+      operationId: Endpoints_GetEndpoints
+      parameters:
+        - $ref: '#/parameters/subscriptionIdParameter'
+        - $ref: '#/parameters/apiVersionParameter'
+        - $ref: '#/parameters/requestDateParameter'
+        - $ref: '#/parameters/authorizationParameter'
+      responses:
+        '200':
+          description: 节点信息
+          schema:
+            $ref: '#/definitions/EndpointList'
+        default:
+          description: 包含出错信息的通用回复
+          schema:
+            $ref: '#/definitions/APIResponse'
+    put:
+      tags:
+        - 节点管理
+      description: 在指定订阅下创建节点
+      operationId: Endpoints_AddEndpoints
+      parameters:
+        - $ref: '#/parameters/subscriptionIdParameter'
+        - $ref: '#/parameters/apiVersionParameter'
+        - name: setting
+          in: body
+          description: 域名创建信息
+          required: true
+          schema:
+            $ref: '#/definitions/EndpointSetting'
+        - $ref: '#/parameters/requestDateParameter'
+        - $ref: '#/parameters/authorizationParameter'
+      responses:
+        '200':
+          description: 成功创建的节点
+          schema:
+            $ref: '#/definitions/Endpoint'
+        default:
+          description: 包含出错信息的通用回复
+          schema:
+            $ref: '#/definitions/APIResponse'
+  '/subscriptions/{subscriptionId}/endpoints/{endpointId}':
+    delete:
+      tags:
+        - 节点管理
+      description: 删除指定节点
+      operationId: Endpoints_DeleteEndpoint
+      parameters:
+        - $ref: '#/parameters/subscriptionIdParameter'
+        - name: endpointId
+          in: path
+          description: 节点唯一标志.
+          required: true
+          type: string
+        - $ref: '#/parameters/apiVersionParameter'
+        - $ref: '#/parameters/requestDateParameter'
+        - $ref: '#/parameters/authorizationParameter'
+      responses:
+        '202':
+          description: 请求已被处理
+          schema:
+            $ref: '#/definitions/APIResponse'
+        default:
+          description: 包含出错信息的通用回复
+          schema:
+            $ref: '#/definitions/APIResponse'
+    post:
+      tags:
+        - 节点管理
+      description: 更新节点
+      operationId: Endpoints_UpdateEndpoint
+      parameters:
+        - $ref: '#/parameters/subscriptionIdParameter'
+        - name: endpointId
+          in: path
+          description: 节点唯一标识
+          required: true
+          type: string
+        - name: endpointSetting
+          in: body
+          description: 节点更新设定
+          required: true
+          schema:
+            $ref: '#/definitions/EndpointSettingUpdateProperty'
+        - $ref: '#/parameters/apiVersionParameter'
+        - $ref: '#/parameters/requestDateParameter'
+        - $ref: '#/parameters/authorizationParameter'
+      responses:
+        '202':
+          description: 操作已提交的通用回复
+          schema:
+            $ref: '#/definitions/APIResponse'
+        default:
+          description: 包含出错信息的通用回复
+          schema:
+            $ref: '#/definitions/APIResponse'
+    get:
+      tags:
+        - 节点管理
+      description: 获取节点信息
+      operationId: Endpoints_GetEndpoint
+      parameters:
+        - $ref: '#/parameters/subscriptionIdParameter'
+        - name: endpointId
+          in: path
+          description: 节点唯一标识
+          required: true
+          type: string
+        - $ref: '#/parameters/apiVersionParameter'
+        - $ref: '#/parameters/requestDateParameter'
+        - $ref: '#/parameters/authorizationParameter'
+      responses:
+        '200':
+          description: 节点信息
+          schema:
+            $ref: '#/definitions/Endpoint'
+        default:
+          description: 包含出错信息的通用回复
+          schema:
+            $ref: '#/definitions/APIResponse'
+  '/subscriptions/{subscriptionId}/endpoints/{endpointId}/cacherules':
+    post:
+      tags:
+        - 节点管理
+      description: 更新缓存规则
+      operationId: Endpoints_AddCacheRule
+      parameters:
+        - $ref: '#/parameters/subscriptionIdParameter'
+        - name: endpointId
+          in: path
+          description: 节点唯一标识
+          required: true
+          type: string
+        - name: policy
+          in: body
+          description: 缓存策略
+          required: true
+          schema:
+            $ref: '#/definitions/CachePolicy'
+        - $ref: '#/parameters/apiVersionParameter'
+        - $ref: '#/parameters/requestDateParameter'
+        - $ref: '#/parameters/authorizationParameter'
+      responses:
+        '202':
+          description: 操作已提交的通用回复
+          schema:
+            $ref: '#/definitions/APIResponse'
+        default:
+          description: 包含出错信息的通用回复
+          schema:
+            $ref: '#/definitions/APIResponse'
+  '/subscriptions/{subscriptionId}/endpoints/{endpointId}/enable':
+    post:
+      tags:
+        - 节点管理
+      description: 启用处于禁用状态的节点
+      operationId: Endpoints_EnableEndpoint
+      parameters:
+        - $ref: '#/parameters/subscriptionIdParameter'
+        - name: endpointId
+          in: path
+          description: 节点唯一标识
+          required: true
+          type: string
+        - $ref: '#/parameters/apiVersionParameter'
+        - $ref: '#/parameters/requestDateParameter'
+        - $ref: '#/parameters/authorizationParameter'
+      responses:
+        '202':
+          description: 操作已提交的通用回复
+          schema:
+            $ref: '#/definitions/APIResponse'
+        default:
+          description: 包含出错信息的通用回复
+          schema:
+            $ref: '#/definitions/APIResponse'
+  '/subscriptions/{subscriptionId}/endpoints/{endpointId}/disable':
+    post:
+      tags:
+        - 节点管理
+      description: 禁用处于指定节点
+      operationId: Endpoints_DisableEndpoint
+      parameters:
+        - $ref: '#/parameters/subscriptionIdParameter'
+        - name: endpointId
+          in: path
+          description: 节点唯一标识
+          required: true
+          type: string
+        - $ref: '#/parameters/apiVersionParameter'
+        - $ref: '#/parameters/requestDateParameter'
+        - $ref: '#/parameters/authorizationParameter'
+      responses:
+        '202':
+          description: 操作已提交的通用回复
+          schema:
+            $ref: '#/definitions/APIResponse'
+        default:
+          description: 包含出错信息的通用回复
+          schema:
+            $ref: '#/definitions/APIResponse'
+  '/subscriptions/{subscriptionId}/endpoints/{endpointId}/purges':
+    post:
+      tags:
+        - 缓存刷新
+      description: 刷新CDN端缓存
+      operationId: Endpoints_PurgeContent
+      parameters:
+        - name: endpointId
+          in: path
+          description: 目标节点唯一标识
+          required: true
+          type: string
+        - name: purgeContent
+          in: body
+          description: >-
+            需要进行刷新的绝对路径，可以对单个文件, 比如'http://example.com/pictures/city.png'进行刷新,
+            也可以对整个目录，比如'http://example.com/pictures/'对整个目录进行刷新
+          required: true
+          schema:
+            $ref: '#/definitions/PurgeParameters'
+        - $ref: '#/parameters/subscriptionIdParameter'
+        - $ref: '#/parameters/apiVersionParameter'
+        - $ref: '#/parameters/requestDateParameter'
+        - $ref: '#/parameters/authorizationParameter'
+      responses:
+        '202':
+          description: 操作已提交的通用回复，AsyncInfo中的TrackingID信息可以用来查询刷新状态。
+          schema:
+            $ref: '#/definitions/APIResponse'
+        default:
+          description: 包含出错信息的通用回复
+          schema:
+            $ref: '#/definitions/APIResponse'
+  '/subscriptions/{subscriptionId}/endpoints/{endpointId}/purges/{purgeId}':
+    get:
+      tags:
+        - 缓存刷新
+      description: 获取缓存刷新结果
+      operationId: Endpoints_GetPurgeContent
+      parameters:
+        - name: endpointId
+          in: path
+          description: 节点唯一标识
+          required: true
+          type: string
+        - name: purgeId
+          in: path
+          description: 一次缓存刷新操作唯一标识
+          required: true
+          type: string
+        - $ref: '#/parameters/subscriptionIdParameter'
+        - $ref: '#/parameters/apiVersionParameter'
+        - $ref: '#/parameters/requestDateParameter'
+        - $ref: '#/parameters/authorizationParameter'
+      responses:
+        '200':
+          description: 预加载结果
+          schema:
+            $ref: '#/definitions/PreloadResult'
+        default:
+          description: 包含出错信息的通用回复
+          schema:
+            $ref: '#/definitions/APIResponse'
+  '/subscriptions/{subscriptionId}/endpoints/{endpointId}/preloads':
+    post:
+      tags:
+        - 预加载
+      description: 预加载内容
+      operationId: Endpoints_LoadContent
+      parameters:
+        - name: endpointId
+          in: path
+          description: 节点唯一标识
+          required: true
+          type: string
+        - name: preloadContent
+          in: body
+          description: '预加载内容. 路径应该为全路径，比如‘http://example.com/pictires/city.png''会预加载指定图片'
+          required: true
+          schema:
+            $ref: '#/definitions/PreloadParameters'
+        - $ref: '#/parameters/subscriptionIdParameter'
+        - $ref: '#/parameters/apiVersionParameter'
+      responses:
+        '202':
+          description: 操作已提交的通用回复，AsyncInfo中的TrackingID信息可以用来查询预加载状态。
+          schema:
+            $ref: '#/definitions/APIResponse'
+        default:
+          description: 包含出错信息的通用回复
+          schema:
+            $ref: '#/definitions/APIResponse'
+  '/subscriptions/{subscriptionId}/endpoints/{endpointId}/preloads/{preloadId}':
+    get:
+      tags:
+        - 预加载
+      description: 获取预加载结果
+      operationId: Endpoints_GetPreloadContent
+      parameters:
+        - name: endpointId
+          in: path
+          description: 节点唯一标识
+          required: true
+          type: string
+        - name: preloadId
+          in: path
+          description: 预加载操作唯一标识
+          required: true
+          type: string
+        - $ref: '#/parameters/subscriptionIdParameter'
+        - $ref: '#/parameters/apiVersionParameter'
+        - $ref: '#/parameters/requestDateParameter'
+        - $ref: '#/parameters/authorizationParameter'
+      responses:
+        '200':
+          description: 预加载结果
+          schema:
+            $ref: '#/definitions/PreloadResult'
+        default:
+          description: 包含出错信息的通用回复
+          schema:
+            $ref: '#/definitions/APIResponse'
+  '/subscriptions/{subscriptionId}/endpoints/{endpointId}/operations/{operationId}':
+    get:
+      tags:
+        - 操作
+      description: 获取一次操作信息
+      operationId: ListOperation
+      parameters:
+        - $ref: '#/parameters/subscriptionIdParameter'
+        - name: endpointId
+          in: path
+          description: 节点唯一标识
+          required: true
+          type: string
+        - name: operationId
+          in: path
+          description: 操作唯一标识
+          required: true
+          type: string
+        - $ref: '#/parameters/apiVersionParameter'
+        - $ref: '#/parameters/requestDateParameter'
+        - $ref: '#/parameters/authorizationParameter'
+      responses:
+        '200':
+          description: 操作信息
+          schema:
+            $ref: '#/definitions/Operation'
+        default:
+          description: 包含出错信息的通用回复
+          schema:
+            $ref: '#/definitions/APIResponse'
+  '/subscriptions/{subscriptionId}/endpoints/{endpointId}/volume':
+    get:
+      tags:
+        - 流量
+      description: 查询指定节点的流量信息
+      operationId: ListEndpointVolume
+      parameters:
+        - $ref: '#/parameters/subscriptionIdParameter'
+        - name: endpointId
+          in: path
+          description: 节点唯一标识
+          required: true
+          type: string
+        - $ref: '#/parameters/apiVersionParameter'
+        - $ref: '#/parameters/granularityParameter'
+        - $ref: '#/parameters/startTimeParameter'
+        - $ref: '#/parameters/endTimeParameter'
+        - $ref: '#/parameters/requestDateParameter'
+        - $ref: '#/parameters/authorizationParameter'
+      responses:
+        '200':
+          description: 流量信息
+          schema:
+            $ref: '#/definitions/CDNEndpointVolume'
+        default:
+          description: 包含出错信息的通用回复
+          schema:
+            $ref: '#/definitions/APIResponse'
+  '/subscriptions/{subscriptionId}/volume':
+    get:
+      tags:
+        - 流量
+      description: 查询指定订阅下的流量信息
+      operationId: ListSubscriptionVolume
+      parameters:
+        - $ref: '#/parameters/subscriptionIdParameter'
+        - $ref: '#/parameters/apiVersionParameter'
+        - $ref: '#/parameters/granularityParameter'
+        - $ref: '#/parameters/startTimeParameter'
+        - $ref: '#/parameters/endTimeParameter'
+        - $ref: '#/parameters/requestDateParameter'
+        - $ref: '#/parameters/authorizationParameter'
+      responses:
+        '200':
+          description: 流量信息
+          schema:
+            $ref: '#/definitions/CDNSubscriptionVolume'
+        default:
+          description: 包含出错信息的通用回复
+          schema:
+            $ref: '#/definitions/APIResponse'
+  '/subscriptions/{subscriptionId}/endpoints/{endpointId}/bandwidth':
+    get:
+      tags:
+        - 流量
+      description: 查询指定节点带宽信息
+      operationId: ListEndpointBandwidth
+      parameters:
+        - $ref: '#/parameters/subscriptionIdParameter'
+        - name: endpointId
+          in: path
+          description: 节点唯一标识
+          required: true
+          type: string
+        - $ref: '#/parameters/apiVersionParameter'
+        - $ref: '#/parameters/startTimeParameter'
+        - $ref: '#/parameters/endTimeParameter'
+        - $ref: '#/parameters/requestDateParameter'
+        - $ref: '#/parameters/authorizationParameter'
+      responses:
+        '200':
+          description: 带宽信息
+          schema:
+            $ref: '#/definitions/CDNEndpointBandwidth'
+        default:
+          description: 包含出错信息的通用回复
+          schema:
+            $ref: '#/definitions/APIResponse'
+definitions:
+  PurgeParameters:
+    description: 缓存刷新参数
+    type: object
+    properties:
+      Files:
+        description: 待刷新文件路径集合
+        type: array
+        items:
+          type: string
+      Directories:
+        description: 待刷新目录路径集合
+        type: array
+        items:
+          type: string
+  PreloadParameters:
+    type: object
+    description: 预加载内容参数
+    required:
+      - Files
+    properties:
+      Files:
+        description: 预加载路径，绝对路径
+        type: array
+        items:
+          type: string
+  Operation:
+    description: CDN操作
+    type: object
+    properties:
+      Id:
+        description: 操作唯一标识
+        type: string
+      Type:
+        description: 操作类型
+        type: string
+      Status:
+        description: 操作状态
+        type: string
+        enum:
+          - NotSet
+          - Processing
+          - Succeed
+          - Failed
+      Message:
+        description: 操作信息
+        type: string
+      Start:
+        description: 起始时间
+        type: string
+        format: date-time
+      End:
+        description: 结束时间
+        type: string
+        format: date-time
+      EndpointId:
+        description: 节点唯一标识
+        type: string
+      SubscriptionId:
+        description: 订阅唯一标识
+        type: string
+  PurgeResult:
+    description: 缓存刷新结果
+    properties:
+      Files:
+        type: array
+        items:
+          $ref: '#/definitions/PurgeItemResult'
+        description: 文件缓存结果
+      Directories:
+        type: array
+        items:
+          $ref: '#/definitions/PurgeItemResult'
+        description: 目录缓存刷新结果
+  PurgeItemResult:
+    description: 单条缓存刷新结果
+    type: object
+    properties:
+      Url:
+        description: 目标刷新路径
+        type: string
+      Status:
+        description: 刷新状态
+        type: string
+        enum:
+          - Succeed
+          - Running
+          - Failed
+  PreloadResult:
+    description: 预加载结果
+    properties:
+      Files:
+        type: array
+        items:
+          $ref: '#/definitions/PreloadItemResult'
+        description: 预加载结果集合
+  PreloadItemResult:
+    description: 单条路径预加载结果
+    type: object
+    properties:
+      Url:
+        description: 目标刷新路径
+        type: string
+      Status:
+        description: 刷新状态
+        type: string
+        enum:
+          - Waiting
+          - Running
+          - Succeed
+          - Failed
+  APIResponse:
+    description: 通用返回信息
+    type: object
+    properties:
+      Succeeded:
+        description: 请求已被服务端成功受理
+        type: boolean
+      ErrorInfo:
+        $ref: '#/definitions/APIErrorResponseInfo'
+      IsAsync:
+        description: 请求在服务后台以异步形式完成
+        type: boolean
+      AsyncInfo:
+        $ref: '#/definitions/APIAsyncResponseInfo'
+  APIErrorResponseInfo:
+    description: 出错信息描述
+    type: object
+    properties:
+      Type:
+        description: 错误类型
+        type: string
+      Message:
+        description: 错误原因
+        type: string
+  APIAsyncResponseInfo:
+    description: 异步调用信息
+    type: object
+    properties:
+      TaskTrackId:
+        description: 任务唯一标识，可通过操作接口查询状态
+        type: string
+      TaskStatus:
+        description: '任务状态， NotSet: 状态未知；Processing: 正在处理；Succeeded: 成功；Failed: 失败'
+        type: string
+        enum:
+          - NotSet
+          - Processing
+          - Succeeded
+          - Failed
+  CDNEndpointVolume:
+    description: 指定节点流量信息
+    type: object
+    properties:
+      DomainName:
+        description: 加速域名
+        type: string
+      Items:
+        type: array
+        items:
+          $ref: '#/definitions/CDNVolumeItem'
+        description: 详细流量信息
+      TotalCdnVolumeInMB:
+        description: 总CDN流量值，以MB为单位
+        type: string
+      TotalOriginVolumeInMB:
+        description: 总回源流量值，以MB为单位
+        type: string
+  CDNVolumeItem:
+    description: 单个时间戳流量信息
+    type: object
+    properties:
+      Timestamp:
+        description: 时间戳
+        type: string
+        format: date-time
+      VolumeInMB:
+        description: CDN流量值，以MB为单位
+        type: number
+        format: double
+      OriginVolumeInMB:
+        description: 回源流量值，以MB为单位
+        type: number
+        format: double
+  CDNSubscriptionVolume:
+    description: 订阅流量信息
+    type: object
+    properties:
+      Details:
+        type: object
+        additionalProperties:
+          $ref: '#/definitions/CDNEndpointVolume'
+        description: 详细流量信息字典，域名作为键，域名流量信息为值
+      TotalCdnVolumeInMB:
+        description: 总CDN流量值，以MB为单位
+        type: number
+        format: double
+      TotalOriginVolumeInMB:
+        description: 总回源流量值，以MB为单位
+        type: number
+        format: double
+  CDNEndpointBandwidth:
+    description: 节点带宽信息
+    type: object
+    properties:
+      DomainName:
+        description: 加速域名
+        type: string
+      Items:
+        type: array
+        items:
+          $ref: '#/definitions/CDNBandwidthItem'
+        description: 带宽信息集合.
+      PeakBandwidthInMbps:
+        description: CDN峰值带宽，单位Mbps
+        type: number
+        format: double
+      ValleyBandwidthInMbps:
+        description: CDN谷底带宽，单位Mbps
+        type: number
+        format: double
+      PeakOriginBandwidthInMbps:
+        description: 回源峰值带宽，单位Mbps
+        type: number
+        format: double
+      ValleyOriginBandwidthInMbps:
+        description: 回源谷底带宽，单位Mbps
+        type: number
+        format: double
+  CDNBandwidthItem:
+    description: 单条带宽信息
+    type: object
+    properties:
+      Timestamp:
+        description: 流量取量时间戳
+        type: string
+        format: date-time
+      BandwidthInMbps:
+        description: CDN带宽信息以Mbps为单位.
+        type: string
+      OriginBandwidthInMbps:
+        description: 回源带宽信息以Mbps为单位
+        type: string
+  EndpointSetting:
+    description: 节点信息
+    type: object
+    properties:
+      CustomDomain:
+        description: 加速域名
+        type: string
+      Host:
+        description: 回源主机标头
+        type: string
+      ICP:
+        description: ICP备案号
+        type: string
+      Origin:
+        $ref: '#/definitions/CDNOrigin'
+      ServiceType:
+        description: >-
+          加速类型。Web:
+          网页加速，Download：下载加速，VOD：点播加速，LieStreaming：直播加速，ImageProcessing：图片处理加速
+        type: string
+        enum:
+          - Web
+          - Download
+          - VOD
+          - LiveStreaming
+          - ImageProcessing
+  EndpointSettingForUpdate:
+    description: 域名更新设定
+    type: object
+    properties:
+      Host:
+        description: 回源主机标头
+        type: string
+      Origin:
+        $ref: '#/definitions/CDNOrigin'
+  EndpointStatus:
+    description: 域名状态
+    type: object
+    properties:
+      Enabled:
+        description: 域名是否已启用
+        type: string
+        format: boolean
+      IcpVerifyStatus:
+        description: ICP备案验证信息。IcpVerifying：正在验证，IcpVerifyFailed：验证失败，IcpVerified：验证成功
+        type: string
+        enum:
+          - IcpVerifying
+          - IcpVerifyFailed
+          - IcpVerified
+      LifetimeStatus:
+        description: >-
+          节点状况。Normal：正常，Creating：正在创建，CreationFailed：创建失败，Deleting：正在删除，Deleted：已删除，Updating：正在更新，Enabling：正在激活，Disabling：正在禁用
+        type: string
+        enum:
+          - Normal
+          - Creating
+          - CreationFailed
+          - Deleting
+          - Deleted
+          - Updating
+          - Enabling
+          - Disabling
+      CNameConfigured:
+        description: 加速域名CNAME记录是否已配置
+        type: string
+        format: boolean
+      FreeTrialExpired:
+        description: 是否已过试用期
+        type: string
+        format: boolean
+      TimeLastUpdated:
+        description: 最近更新时间
+        type: string
+        format: date-time
+  Endpoint:
+    description: 节点信息.
+    type: object
+    properties:
+      EndpointID:
+        description: 节点唯一标识
+        type: string
+      Setting:
+        $ref: '#/definitions/EndpointSetting'
+      Status:
+        $ref: '#/definitions/EndpointStatus'
+  EndpointList:
+    description: 节点集合
+    type: array
+    items:
+      $ref: '#/definitions/Endpoint'
+  CDNOrigin:
+    description: 回源信息
+    type: object
+    properties:
+      Addresses:
+        description: 回源地址集合.
+        type: array
+        items:
+          type: string
+  EndpointSettingUpdateProperty:
+    description: Endpoint setting update property.
+    type: object
+    properties:
+      EndpointSettings:
+        $ref: '#/definitions/EndpointSettingForUpdate'
+      UpdateFlag:
+        description: 域名设定更新标志位.
+        type: string
+        enum:
+          - Origin
+          - HostHeader
+  CachePolicy:
+    description: 缓存策略
+    type: object
+    properties:
+      Rules:
+        type: array
+        items:
+          $ref: '#/definitions/CacheRule'
+        description: 缓存规则集合.
+      IgnoreCacheControl:
+        description: 是否忽略返回头中的cache-control头部对请求内容进行缓存
+        type: string
+        format: boolean
+      IgnoreQueryString:
+        description: 是否忽略查询参数对请求内容进行缓存
+        type: string
+        format: boolean
+      IgnoreCookie:
+        description: 是否忽略返回头中的set-cookie头部对请求内容进行缓存
+        type: string
+        format: boolean
+  CacheRule:
+    description: 单条缓存规则
+    type: object
+    properties:
+      Items:
+        type: array
+        items:
+          type: string
+        description: 缓存规则路径集合.
+      TTL:
+        description: 缓存失效时间，单位为秒
+        type: string
+        format: number
+      Type:
+        description: '缓存规则类型。Suffix: 基于文件拓展名进行缓存，Dir: 对指定目录下的所有文件进行缓存，FullUri: 对指定路径的文件进行缓存。'
+        type: string
+        enum:
+          - Suffix
+          - Dir
+          - FullUri
+parameters:
+  requestDateParameter:
+    name: x-azurecdn-request-date
+    in: header
+    description: '符合UTC ''yyyy-MM-dd hh:mm:ss''格式的当前请求时间'
+    required: true
+    type: string
+  authorizationParameter:
+    name: Authorization
+    in: header
+    description: 授权头，详细算法见顶部描述
+    required: true
+    type: string
+  subscriptionIdParameter:
+    name: subscriptionId
+    in: path
+    description: 订阅唯一标识
+    required: true
+    type: string
+  apiVersionParameter:
+    name: apiVersion
+    in: query
+    required: true
+    type: string
+    description: 接口版本信息，当前版本1.0.
+  granularityParameter:
+    name: granularity
+    in: query
+    required: true
+    type: string
+    enum:
+      - PerFiveMinutes
+      - PerHour
+      - PerDay
+    description: 流量统计粒度，可以分别按五分钟，小时和天计
+  startTimeParameter:
+    name: startTime
+    in: query
+    description: '流量查询起始时间，必须符合UTC ''yyyy-MM-ddThh:mm:ssZ''格式'
+    required: true
+    type: string
+    format: date-time
+  endTimeParameter:
+    name: endTime
+    in: query
+    description: '流量查询结束时间，必须符合UTC ''yyyy-MM-ddThh:mm:ssZ''格式'
+    required: true
+    type: string
+    format: date-time
