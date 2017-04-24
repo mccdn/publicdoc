@@ -336,7 +336,7 @@
         "tags": [
           "节点管理"
         ],
-        "description": "禁用处于指定节点",
+        "description": "禁用处于启用状态的节点",
         "operationId": "Endpoints_DisableEndpoint",
         "parameters": [
           {
