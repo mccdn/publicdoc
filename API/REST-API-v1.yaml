@@ -8,7 +8,7 @@ info:
      验证和授权方式基于接口密钥，请先到CDN管理界面密钥管理处进行接口密钥申请。
 
      授权信息以Authorization请求头发送，格式为"AzureCDN {密钥唯一标识}:{用密钥值计算出来的SHA 256请求内容签名}"。 签名部分包括：请求绝对路径，用 ", "连接起来的排序过的查询参数，请求的UTC时间戳，大写的请求方法。以上几部分用回车换行连接。
-     
+
     Python示例：
 
           def calculate_authorization_header(request_url, request_timestamp, key_id, key_value, http_method):
@@ -18,15 +18,15 @@ info:
               message = "%s\r\n%s\r\n%s\r\n%s" % (urlparts.path, ", ".join(['%s:%s' % (key, value[0]) for (key, value) in ordered_queries.items()]), request_timestamp, http_method)
               digest = hmac.new(bytearray(key_value, "utf-8"), bytearray(message, "utf-8"), hashlib.sha256).hexdigest().upper()
               return "AzureCDN %s:%s" % (key_id, digest)
-              
+
     Java示例:
-      
+
         public static String calculateAuthorizationHeader(String requestURL, String requestTimestamp, String keyID, String keyValue, String httpMethod) throws Exception {
               URL url = new URL(requestURL);
               String path = url.getPath();
-              
+
               // Get query parameters
-              String query = url.getQuery();      
+              String query = url.getQuery();
               String[] params = query.split("&");
               Map<String, String> paramMap = new TreeMap<String, String>();
               for(String param: params) {
@@ -34,21 +34,21 @@ info:
                     if(paramterParts.length != 2) {
                           continue;
                     }
-                    
+
                     paramMap.put(paramterParts[0], paramterParts[1]);
               }
-              
+
               String orderedQueries = paramMap.entrySet()
                                               .stream()
                                               .map(entry -> entry.getKey() + ":" + entry.getValue())
                                               .collect(Collectors.joining(", "));
-              
-              String content = String.format("%s\r\n%s\r\n%s\r\n%s", path, orderedQueries, requestTimestamp, httpMethod);        
+
+              String content = String.format("%s\r\n%s\r\n%s\r\n%s", path, orderedQueries, requestTimestamp, httpMethod);
               Mac sha256HMAC = Mac.getInstance("HmacSHA256");
               SecretKeySpec secret_key = new SecretKeySpec(keyValue.getBytes(), "HmacSHA256");
               sha256HMAC.init(secret_key);
               byte[] bytes = sha256HMAC.doFinal(content.getBytes());
-              
+
               StringBuffer hash = new StringBuffer();
               for (int i = 0; i < bytes.length; i++) {
                   String hex = Integer.toHexString(0xFF & bytes[i]);
@@ -57,20 +57,20 @@ info:
                   }
                   hash.append(hex);
               }
-        
+
               return String.format("AzureCDN %s:%s", keyID, hash.toString().toUpperCase());
         }
-        
+
       C#示例：
-        
+
         public static string CalculateAuthorizationHeader(string requestUrl, string requestDate, string key, string httpMethod)
           {
                   Uri requestUri = new Uri(requestUrl);
-                  
+
                   StringBuilder hashContentBuilder = new StringBuilder();
                   hashContentBuilder.Append(requestUri.AbsolutePath.ToLowerInvariant());
                   hashContentBuilder.Append("\r\n");
-      
+
                   var queryStrings = HttpUtility.ParseQueryString(requestUri.Query);
                   var sortedParameterNames = queryStrings.AllKeys.ToList();
                   sortedParameterNames.Sort((q1, q2) => string.Compare(q1, q2));
@@ -80,39 +80,39 @@ info:
                       hashContentBuilder.Append(result);
                       hashContentBuilder.Append("\r\n");
                   }
-      
+
                   hashContentBuilder.Append(requestDate);
                   hashContentBuilder.Append("\r\n");
                   hashContentBuilder.Append(httpMethod.ToUpper());
                   string hashContent = hashContentBuilder.ToString();
-      
+
                   using (HMACSHA256 myhmacsha256 = new HMACSHA256(Encoding.UTF8.GetBytes(key)))
                   {
                       byte[] byteArray = Encoding.UTF8.GetBytes(hashContent);
                       byte[] hashedValue = myhmacsha256.ComputeHash(byteArray);
-      
+
                       string sbinary = string.Empty;
                       for (int i = 0; i < hashedValue.Length; i++)
                       {
                           sbinary += hashedValue[i].ToString("X2");
                       }
-      
+
                       return sbinary;
                   }
           }
-        
+
     Go示例：
-      
-      
+
+
           func calculateAuthorizationHeader(requestURL, requestTimeStamp, keyID, keyValue, httpMethod string) string {
                       u, err := url.Parse(requestURL)
                       if err != nil {
                           panic(err)
                       }
-      
+
                       var path = u.Path
                       m, _ := url.ParseQuery(u.RawQuery)
-      
+
                       var keys []string
                       for k := range m {
                                       keys = append(keys, k)
@@ -122,7 +122,7 @@ info:
                       for _, k := range keys {
                                       orderedQueries = append(orderedQueries, fmt.Sprintf("%s:%s", k, m[k][0]))
                       }
-      
+
                       var queries = strings.Join(orderedQueries, ", ")
                       content := fmt.Sprintf("%s\r\n%s\r\n%s\r\n%s", path, queries, requestTimeStamp, httpMethod)
                       hash := hmac.New(sha256.New, []byte(keyValue))
@@ -158,7 +158,7 @@ paths:
           description: 包含出错信息的通用回复
           schema:
             $ref: '#/definitions/APIResponse'
-    put:
+    post:
       tags:
         - 节点管理
       description: 在指定订阅下创建节点
@@ -208,7 +208,7 @@ paths:
           description: 包含出错信息的通用回复
           schema:
             $ref: '#/definitions/APIResponse'
-    post:
+    put:
       tags:
         - 节点管理
       description: 更新节点
@@ -263,7 +263,7 @@ paths:
           schema:
             $ref: '#/definitions/APIResponse'
   '/subscriptions/{subscriptionId}/endpoints/{endpointId}/cacherules':
-    post:
+    put:
       tags:
         - 节点管理
       description: 更新缓存规则

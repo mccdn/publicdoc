@@ -52,7 +52,7 @@
           }
         }
       },
-      "put": {
+      "post": {
         "tags": [
           "节点管理"
         ],
@@ -140,7 +140,7 @@
           }
         }
       },
-      "post": {
+      "put": {
         "tags": [
           "节点管理"
         ],
@@ -235,7 +235,7 @@
       }
     },
     "/subscriptions/{subscriptionId}/endpoints/{endpointId}/cacherules": {
-      "post": {
+      "put": {
         "tags": [
           "节点管理"
         ],
