@@ -1093,8 +1093,28 @@
       "type": "object",
       "properties": {
         "Type": {
-          "description": "错误类型",
-          "type": "string"
+          "description": "'错误类型：\n   CredentialInvalid: 凭据不合法\n   ParameterMissing: 缺少参数\n   ParameterInvalid: 参数不合法\n   MissingAuthorizationHeader: 缺少授权头\n   InvalidRequestDateHeader: 请求日期不合法\n   MissingRequestDateHeader: 缺少请求日期头\n   AuthorizationHeaderExpired: 授权头过期\n   InvalidAuthorizationHeader: 授权头不合法\n   ApiKeyNotFound: 找不到接口密钥\n   InvalidApiKey: 接口密钥不合法\n   WrongSignature: 签名不对\n   SubscriptionNotFound: 找不到制定订阅\n   EndpointDoesNotBelongToSubscription: 节点不属于该订阅\n   EndpointNotInActiveState: 节点不处于活跃状态\n   EndpointNotFound: 找不到相关节点\n   MaliciousItemPathDetected: 检测到恶意路径\n   PermissionDenied: 权限不够\n   RequestThrottled: 请求被节流\n   InternalError: 内部错误\n",
+          "type": "string",
+          "enum": [
+            "CredentialInvalid",
+            "ParameterMissing",
+            "ParameterInvalid",
+            "MissingAuthorizationHeader",
+            "InvalidRequestDateHeader",
+            "MissingRequestDateHeader",
+            "AuthorizationHeaderExpired",
+            "InvalidAuthorizationHeader",
+            "ApiKeyNotFound",
+            "InvalidApiKey",
+            "WrongSignature",
+            "EndpointDoesNotBelongToSubscription",
+            "EndpointNotInActiveState",
+            "EndpointNotFound",
+            "MaliciousItemPathDetected",
+            "PermissionDenied",
+            "RequestThrottled",
+            "InternalError"
+          ]
         },
         "Message": {
           "description": "错误原因",
@@ -1440,7 +1460,7 @@
             "BlockList",
             "AllowedList"
           ]
-        },
+        }
       }
     },
     "CachePolicy": {

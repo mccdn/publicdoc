@@ -780,8 +780,47 @@ definitions:
     type: object
     properties:
       Type:
-        description: 错误类型
+        description: |
+          '错误类型：
+             CredentialInvalid: 凭据不合法
+             ParameterMissing: 缺少参数
+             ParameterInvalid: 参数不合法
+             MissingAuthorizationHeader: 缺少授权头
+             InvalidRequestDateHeader: 请求日期不合法
+             MissingRequestDateHeader: 缺少请求日期头
+             AuthorizationHeaderExpired: 授权头过期
+             InvalidAuthorizationHeader: 授权头不合法
+             ApiKeyNotFound: 找不到接口密钥
+             InvalidApiKey: 接口密钥不合法
+             WrongSignature: 签名不对
+             SubscriptionNotFound: 找不到制定订阅
+             EndpointDoesNotBelongToSubscription: 节点不属于该订阅
+             EndpointNotInActiveState: 节点不处于活跃状态
+             EndpointNotFound: 找不到相关节点
+             MaliciousItemPathDetected: 检测到恶意路径
+             PermissionDenied: 权限不够
+             RequestThrottled: 请求被节流
+             InternalError: 内部错误
         type: string
+        enum:
+          - CredentialInvalid
+          - ParameterMissing
+          - ParameterInvalid
+          - MissingAuthorizationHeader
+          - InvalidRequestDateHeader
+          - MissingRequestDateHeader
+          - AuthorizationHeaderExpired
+          - InvalidAuthorizationHeader
+          - ApiKeyNotFound
+          - InvalidApiKey
+          - WrongSignature
+          - EndpointDoesNotBelongToSubscription
+          - EndpointNotInActiveState
+          - EndpointNotFound
+          - MaliciousItemPathDetected
+          - PermissionDenied
+          - RequestThrottled
+          - InternalError
       Message:
         description: 错误原因
         type: string
