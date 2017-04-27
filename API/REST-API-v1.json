@@ -239,7 +239,7 @@
         "tags": [
           "节点管理"
         ],
-        "description": "更新缓存规则",
+        "description": "更新缓存策略",
         "operationId": "Endpoints_AddCacheRule",
         "parameters": [
           {
@@ -276,6 +276,143 @@
             "description": "操作已提交的通用回复",
             "schema": {
               "$ref": "#/definitions/APIResponse"
+            }
+          },
+          "default": {
+            "description": "包含出错信息的通用回复",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "节点管理"
+        ],
+        "description": "查询缓存策略",
+        "operationId": "Endpoints_GetCacheRule",
+        "parameters": [
+          {
+            "$ref": "#/parameters/subscriptionIdParameter"
+          },
+          {
+            "name": "endpointId",
+            "in": "path",
+            "description": "节点唯一标识",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "$ref": "#/parameters/apiVersionParameter"
+          },
+          {
+            "$ref": "#/parameters/requestDateParameter"
+          },
+          {
+            "$ref": "#/parameters/authorizationParameter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "缓存策略",
+            "schema": {
+              "$ref": "#/definitions/CachePolicy"
+            }
+          },
+          "default": {
+            "description": "包含出错信息的通用回复",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
+            }
+          }
+        }
+      }
+    },
+    "/subscriptions/{subscriptionId}/endpoints/{endpointId}/accesscontrol": {
+      "put": {
+        "tags": [
+          "节点管理"
+        ],
+        "description": "更新访问控制规则",
+        "operationId": "Endpoints_AddAccessControl",
+        "parameters": [
+          {
+            "$ref": "#/parameters/subscriptionIdParameter"
+          },
+          {
+            "name": "endpointId",
+            "in": "path",
+            "description": "节点唯一标识",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "policy",
+            "in": "body",
+            "description": "访问控制规则",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AccessControl"
+            }
+          },
+          {
+            "$ref": "#/parameters/apiVersionParameter"
+          },
+          {
+            "$ref": "#/parameters/requestDateParameter"
+          },
+          {
+            "$ref": "#/parameters/authorizationParameter"
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "操作已提交的通用回复",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
+            }
+          },
+          "default": {
+            "description": "包含出错信息的通用回复",
+            "schema": {
+              "$ref": "#/definitions/APIResponse"
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "节点管理"
+        ],
+        "description": "查询访问控制规则",
+        "operationId": "Endpoints_GetAccessControl",
+        "parameters": [
+          {
+            "$ref": "#/parameters/subscriptionIdParameter"
+          },
+          {
+            "name": "endpointId",
+            "in": "path",
+            "description": "节点唯一标识",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "$ref": "#/parameters/apiVersionParameter"
+          },
+          {
+            "$ref": "#/parameters/requestDateParameter"
+          },
+          {
+            "$ref": "#/parameters/authorizationParameter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "缓存策略",
+            "schema": {
+              "$ref": "#/definitions/AccessControl"
             }
           },
           "default": {
@@ -467,7 +604,7 @@
           "200": {
             "description": "预加载结果",
             "schema": {
-              "$ref": "#/definitions/PreloadResult"
+              "$ref": "#/definitions/PurgeResult"
             }
           },
           "default": {
@@ -1255,6 +1392,55 @@
             "HostHeader"
           ]
         }
+      }
+    },
+    "AccessControl": {
+      "description": "访问控制规则",
+      "type": "object",
+      "properties": {
+        "ForbiddenIps": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "禁止访问IP列表"
+        },
+        "RefererControl": {
+          "$ref": "#/definitions/RefererControl"
+        }
+      }
+    },
+    "RefererControl": {
+      "description": "防盗链设定",
+      "type": "object",
+      "properties": {
+        "Enabled": {
+          "description": "是否启用防盗链设定",
+          "type": "string",
+          "format": "boolean"
+        },
+        "PathPatterns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "盗链文件路径集合"
+        },
+        "Referers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "盗链集合"
+        },
+        "RefererControlType": {
+          "description": "盗链类型。BlockList: 黑名单，匹配Referers的链接访问匹配PathPatterns的路径时会被禁止访问。AllowedList: 白名单 ，只允许匹配Referers的链接访问匹配PathPatterns的路径。",
+          "type": "string",
+          "enum": [
+            "BlockList",
+            "AllowedList"
+          ]
+        },
       }
     },
     "CachePolicy": {
