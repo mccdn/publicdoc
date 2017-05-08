@@ -66,7 +66,7 @@ func main() {
 
 	// Add headers
 	req.Header.Set("content-type", "application/json")
-	req.Header.Set("Authorization", calculateAuthorizationHeader(apiURL, requestTimestamp, keyID, keyValue, "GET"))
+	req.Header.Set("Authorization", calculateAuthorizationHeader(apiURL, requestTimestamp, keyID, keyValue, requestMethod))
 	req.Header.Set("x-azurecdn-request-date", requestTimestamp)
 
 	resp, ex := client.Do(req)
