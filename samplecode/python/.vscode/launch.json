@@ -1,0 +1,21 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python",
+            "type": "python",
+            "request": "launch",
+            "stopOnEntry": true,
+            "pythonPath": "C:\\Users\\bzhan\\AppData\\Local\\Programs\\Python\\Python35-32\\python.exe",
+            "args": [
+                
+            ],
+            "program": "${file}",
+            "debugOptions": [
+                "WaitOnAbnormalExit",
+                "WaitOnNormalExit",
+                "RedirectOutput"
+            ]
+        }
+    ]
+}
